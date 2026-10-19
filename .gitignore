@@ -1,0 +1,21 @@
+# Python virtual environments
+.venv/
+venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Environment and editor files
+.env
+.env.*
+.vscode/
+.idea/
+
+# Generated synthetic datasets
+data/*.csv
+
+# Operating system files
+.DS_Store
+Thumbs.db
