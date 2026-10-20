@@ -36,12 +36,30 @@ def secret_share_aggregate(counts: list[int]) -> int:
     return aggregate_shares(first_shares, second_shares)
 
 
-def measure_median_time(function, counts: list[int], repetitions: int) -> float:
-    """Return the median execution time in milliseconds."""
+def summarize_timings(timings_ms: list[float]) -> dict:
+    """Summarize timing measurements using the median and quartiles."""
+    if len(timings_ms) < 2:
+        raise ValueError("at least 2 timing measurements are required")
+
+    quartiles = statistics.quantiles(
+        timings_ms, n=4, method="inclusive"
+    )
+
+    return {
+        "median_ms": statistics.median(timings_ms),
+        "q1_ms": quartiles[0],
+        "q3_ms": quartiles[2],
+    }
+
+
+def measure_timing_statistics(
+    function, counts: list[int], repetitions: int
+) -> dict:
+    """Return median, 25th percentile, and 75th percentile in milliseconds."""
     if isinstance(repetitions, bool) or not isinstance(repetitions, int):
         raise TypeError("repetitions must be an integer")
-    if repetitions < 1:
-        raise ValueError("repetitions must be at least 1")
+    if repetitions < 2:
+        raise ValueError("repetitions must be at least 2")
 
     timings_ms = []
 
@@ -51,7 +69,16 @@ def measure_median_time(function, counts: list[int], repetitions: int) -> float:
         elapsed = time.perf_counter() - start
         timings_ms.append(elapsed * 1000)
 
-    return statistics.median(timings_ms)
+    return summarize_timings(timings_ms)
+
+
+def measure_median_time(
+    function, counts: list[int], repetitions: int
+) -> float:
+    """Return the median execution time in milliseconds."""
+    return measure_timing_statistics(
+        function, counts, repetitions
+    )["median_ms"]
 
 
 def benchmark_workload(
@@ -79,18 +106,25 @@ def benchmark_workload(
     if not results_match:
         raise AssertionError("Ordinary and secret-share totals do not match.")
 
-    ordinary_ms = measure_median_time(
+    ordinary_stats = measure_timing_statistics(
         ordinary_aggregate, counts, repetitions
     )
-    secure_ms = measure_median_time(
+    secure_stats = measure_timing_statistics(
         secret_share_aggregate, counts, repetitions
     )
+
+    ordinary_ms = ordinary_stats["median_ms"]
+    secure_ms = secure_stats["median_ms"]
 
     return {
         "institutions": number_of_institutions,
         "total": ordinary_result,
         "ordinary_ms": ordinary_ms,
+        "ordinary_q1_ms": ordinary_stats["q1_ms"],
+        "ordinary_q3_ms": ordinary_stats["q3_ms"],
         "secret_share_ms": secure_ms,
+        "secret_share_q1_ms": secure_stats["q1_ms"],
+        "secret_share_q3_ms": secure_stats["q3_ms"],
         "overhead_ratio": (
             secure_ms / ordinary_ms if ordinary_ms > 0 else float("inf")
         ),
@@ -110,7 +144,11 @@ def save_results(results: list[dict], output_path: Path = RESULTS_FILE) -> None:
         "institutions",
         "total",
         "ordinary_ms",
+        "ordinary_q1_ms",
+        "ordinary_q3_ms",
         "secret_share_ms",
+        "secret_share_q1_ms",
+        "secret_share_q3_ms",
         "overhead_ratio",
         "repetitions",
         "results_match",
@@ -128,15 +166,9 @@ def main() -> None:
     repetitions = 101
 
     print("AGGREGATION PERFORMANCE MICROBENCHMARK")
-    print("=" * 94)
+    print("=" * 110)
     print(f"Trials per method and workload: {repetitions}")
-    print("Reported time: median milliseconds per call\n")
-
-    print(
-        f"{'Institutions':>12} | {'Total':>8} | {'Ordinary (ms)':>14} | "
-        f"{'Secret-share (ms)':>17} | {'Time ratio':>11} | {'Match':>5}"
-    )
-    print("-" * 94)
+    print("Reported times: median, Q1, and Q3 in milliseconds\n")
 
     results = []
 
@@ -145,12 +177,19 @@ def main() -> None:
         results.append(result)
 
         print(
-            f"{result['institutions']:>12} | "
-            f"{result['total']:>8} | "
-            f"{result['ordinary_ms']:>14.6f} | "
-            f"{result['secret_share_ms']:>17.6f} | "
-            f"{result['overhead_ratio']:>10.1f}x | "
-            f"{str(result['results_match']):>5}"
+            f"Institutions: {result['institutions']:>3} | "
+            f"Total: {result['total']:>5} | "
+            f"Ordinary median: {result['ordinary_ms']:.6f} ms | "
+            f"Q1: {result['ordinary_q1_ms']:.6f} ms | "
+            f"Q3: {result['ordinary_q3_ms']:.6f} ms"
+        )
+        print(
+            f"                 Secret-share median: "
+            f"{result['secret_share_ms']:.6f} ms | "
+            f"Q1: {result['secret_share_q1_ms']:.6f} ms | "
+            f"Q3: {result['secret_share_q3_ms']:.6f} ms | "
+            f"Ratio: {result['overhead_ratio']:.1f}x | "
+            f"Match: {result['results_match']}"
         )
 
     save_results(results)
@@ -166,8 +205,9 @@ def main() -> None:
         "even when absolute execution times are small."
     )
     print(
-        "Results are machine-dependent preliminary measurements, not "
-        "performance evidence for a deployed distributed MPC system."
+        "Q1 and Q3 describe the spread of repeated timings. Results are "
+        "machine-dependent preliminary measurements, not performance "
+        "evidence for a deployed distributed MPC system."
     )
 
 

@@ -3,8 +3,11 @@ import pytest
 
 from src.benchmark_aggregation import (
     benchmark_workload,
+    measure_timing_statistics,
     ordinary_aggregate,
     secret_share_aggregate,
+    save_results,
+    summarize_timings,	
 )
 
 
@@ -77,3 +80,10 @@ def test_save_results_rejects_empty_results(tmp_path):
 
     with pytest.raises(ValueError, match="results must not be empty"):
         save_results([], output_path)
+
+def test_summarize_timings_returns_median_and_quartiles():
+    result = summarize_timings([1.0, 2.0, 3.0, 4.0])
+
+    assert result["median_ms"] == 2.5
+    assert result["q1_ms"] == 1.75
+    assert result["q3_ms"] == 3.25
