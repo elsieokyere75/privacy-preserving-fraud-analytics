@@ -53,7 +53,11 @@ def test_save_results_creates_readable_csv(tmp_path):
             "institutions": 2,
             "total": 51,
             "ordinary_ms": 0.001,
+            "ordinary_q1_ms": 0.0008,
+            "ordinary_q3_ms": 0.0012,
             "secret_share_ms": 0.005,
+            "secret_share_q1_ms": 0.0048,
+            "secret_share_q3_ms": 0.0052,
             "overhead_ratio": 5.0,
             "repetitions": 101,
             "results_match": True,
@@ -73,7 +77,10 @@ def test_save_results_creates_readable_csv(tmp_path):
     assert rows[0]["total"] == "51"
     assert rows[0]["repetitions"] == "101"
     assert rows[0]["results_match"] == "True"
-
+    assert "ordinary_q1_ms" in rows[0]
+    assert "ordinary_q3_ms" in rows[0]
+    assert "secret_share_q1_ms" in rows[0]
+    assert "secret_share_q3_ms" in rows[0]
 
 def test_save_results_rejects_empty_results(tmp_path):
     output_path = tmp_path / "benchmark.csv"
