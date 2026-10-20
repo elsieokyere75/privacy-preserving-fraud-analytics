@@ -84,3 +84,47 @@ def test_reject_share_outside_modulus():
     with pytest.raises(ValueError):
         reconstruct_secret(5, 11, modulus=11)
 
+
+
+def test_split_and_reconstruct_with_custom_modulus():
+    modulus = 101
+    secret = 100
+
+    shares = split_secret(secret, modulus=modulus)
+
+    assert reconstruct_secret(*shares, modulus=modulus) == secret
+
+
+def test_reconstruct_rejects_negative_share():
+    with pytest.raises(ValueError):
+        reconstruct_secret(-1, 5)
+
+
+def test_reconstruct_rejects_boolean_share():
+    with pytest.raises(TypeError):
+        reconstruct_secret(True, 5)
+
+
+def test_reconstruct_rejects_float_share():
+    with pytest.raises(TypeError):
+        reconstruct_secret(1.5, 5)
+
+
+def test_aggregate_empty_share_lists():
+    assert aggregate_shares([], []) == 0
+
+
+def test_aggregate_with_custom_modulus():
+    modulus = 101
+    counts = [20, 30, 40]
+    first_shares = []
+    second_shares = []
+
+    for count in counts:
+        share1, share2 = split_secret(count, modulus=modulus)
+        first_shares.append(share1)
+        second_shares.append(share2)
+
+    assert aggregate_shares(
+        first_shares, second_shares, modulus=modulus
+    ) == 90

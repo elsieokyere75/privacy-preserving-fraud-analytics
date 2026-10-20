@@ -180,7 +180,7 @@ Run the complete test suite:
 python -m pytest -v
 ```
 
-The latest verified run completed with **40 passing tests**. Re-run the tests after making changes to confirm the current project state.
+The latest verified run completed with **46 passing tests**. Re-run the tests after making changes to confirm the current project state.
 
 ## Architecture
 
