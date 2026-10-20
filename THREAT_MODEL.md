@@ -1,124 +1,82 @@
-\# Threat Model: Privacy-Preserving Fraud Analytics
+# Threat Model: Privacy-Preserving Fraud Analytics
 
-
-
-\## 1. Project purpose
-
-
+## 1. Project purpose
 
 This project explores whether simulated financial institutions can contribute fraud-related statistics to a shared analysis without directly disclosing their individual counts.
 
-
-
 The initial prototype implements additive secret sharing over integers modulo a large prime. It is an educational research prototype, not a production-ready multi-party computation system.
 
+## 2. System participants
 
+- **Institution A:** Holds its own fraud-related count.
 
-\## 2. System participants
+- **Institution B:** Holds its own fraud-related count.
 
+- **Aggregation Server 1:** Receives the first share from each institution and adds the shares modulo the chosen prime.
 
+- **Aggregation Server 2:** Receives the second share from each institution and adds the shares modulo the same prime.
 
-\- \*\*Institution A:\*\* Holds its own fraud-related count.
+- **Analyst:** Receives the reconstructed aggregate total.
 
-\- \*\*Institution B:\*\* Holds its own fraud-related count.
+## 3. Assets to protect
 
-\- \*\*Aggregation Server 1:\*\* Receives the first share from each institution and adds the shares modulo the chosen prime.
+- Each institution's individual fraud-related count.
 
-\- \*\*Aggregation Server 2:\*\* Receives the second share from each institution and adds the shares modulo the same prime.
+- The confidentiality of institution-specific contributions during aggregation.
 
-\- \*\*Analyst:\*\* Receives the reconstructed aggregate total.
-
-
-
-\## 3. Assets to protect
-
-
-
-\- Each institution's individual fraud-related count.
-
-\- The confidentiality of institution-specific contributions during aggregation.
-
-\- The integrity and correctness of the reported aggregate.
-
-
+- The integrity and correctness of the reported aggregate.
 
 The current prototype uses synthetic counts only. It does not process real customer or transaction records.
 
+## 4. Adversary and trust assumptions
 
+The intended design considers an honest-but-curious aggregation server. Such a server follows the prescribed computation but may attempt to infer information from the share it receives.
 
-\## 4. Adversary and trust assumptions
+The additive secret-sharing scheme assumes that each secret is split using a uniformly random share modulo the selected modulus, and that an individual server cannot access the other share. Under these assumptions, one share alone does not reveal the secret.
 
+The default modulus is a large prime, `2^127 - 1`. The implementation validates that a modulus is greater than two, but it does not verify that a custom modulus is prime. The modular reconstruction identity holds for any modulus greater than two; the documented default is prime.
 
+The current implementation creates, stores and aggregates both sets of shares within one Python process. It therefore does not enforce separation between aggregation servers, and it does not demonstrate security against collusion or compromise in a real distributed deployment.
 
-The initial design considers an honest-but-curious aggregation server: a server that follows the prescribed computation but may attempt to learn information from the share it receives.
+The prototype does not establish security against malicious participants, compromised software, or side-channel attacks. Those threats require additional protocol design, implementation controls and security analysis.
 
+## 5. Security properties intended
 
+- **Share-level confidentiality:** Under the additive secret-sharing assumptions, one uniformly random share alone does not reveal the corresponding secret. This property is mathematical and does not mean that the current single-process application provides distributed-system security.
 
-The confidentiality argument assumes that the two aggregation servers do not collude and that shares are generated using a cryptographically secure random-number generator.
+- **Correct modular reconstruction:** Combining valid shares reconstructs the aggregate modulo the selected modulus. This equals the ordinary integer sum only when the true aggregate is smaller than the modulus.
 
+- **Basic input validation:** The implementation rejects invalid types, out-of-range shares, invalid moduli, and mismatched share-list lengths. These checks help prevent malformed inputs but do not provide authentication or protection against malicious participants.
 
-
-For an individual server holding one share, a uniformly random additive share modulo the prime does not reveal the original count by itself, under the scheme's mathematical assumptions.
-
-
-
-\## 5. Security properties intended
-
-
-
-\- \*\*Confidentiality of individual counts:\*\* A single aggregation server's share does not reveal the individual count, assuming the other share remains secret and shares are generated correctly.
-
-\- \*\*Correct reconstruction:\*\* Combining valid shares recovers the aggregate modulo the prime.
-
-\- \*\*Basic input validation:\*\* The implementation rejects invalid types, out-of-range shares, invalid moduli and mismatched share lists.
-
-
-
-\## 6. Limitations and out-of-scope threats
-
-
+## 6. Limitations and out-of-scope threats
 
 The current prototype does not provide:
 
+- Protection if both aggregation servers collude and combine their shares.
 
+- Authentication of institutions or aggregation servers.
 
-\- Protection if both aggregation servers collude and combine their shares.
+- Secure network communication or protection against interception.
 
-\- Authentication of institutions or aggregation servers.
+- Integrity guarantees against malicious participants or servers.
 
-\- Secure network communication or protection against interception.
+- Availability guarantees or protection against denial of service.
 
-\- Integrity guarantees against malicious participants or servers.
+- Differential privacy or protection against inference from the released aggregate.
 
-\- Availability guarantees or protection against denial of service.
+- Protection against information leakage from future machine-learning gradients or model updates.
 
-\- Differential privacy or protection against inference from the released aggregate.
-
-\- Protection against information leakage from future machine-learning gradients or model updates.
-
-\- Production deployment controls, key management, audit logging or independent cryptographic review.
-
-
+- Production deployment controls, key management, audit logging or independent cryptographic review.
 
 The current code runs in one Python process. It simulates share distribution in memory and does not implement two independently operated servers.
 
-
-
-\## 7. Numerical assumptions
-
-
+## 7. Numerical assumptions
 
 All values and shares must be integers in the range from zero to one less than the modulus.
 
-
-
 Aggregation is performed modulo the chosen prime. To interpret the reconstructed result as an ordinary integer sum rather than a wrapped modular sum, the true aggregate must be smaller than the modulus.
 
-
-
-\## 8. Planned research extensions
-
-
+## 8. Planned research extensions
 
 1\. Generate reproducible synthetic transaction datasets for two simulated institutions.
 
@@ -130,11 +88,6 @@ Aggregation is performed modulo the chosen prime. To interpret the reconstructed
 
 5\. Refine the threat model as the prototype gains functionality.
 
-
-
-\## 9. Responsible research statement
-
-
+## 9. Responsible research statement
 
 The prototype is intended for learning and research into privacy-enhancing technologies. It must not be used to process confidential banking data or be represented as a secure production banking system without substantial additional engineering, security analysis and independent review.
-
