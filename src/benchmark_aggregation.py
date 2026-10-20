@@ -35,6 +35,24 @@ def secret_share_aggregate(counts: list[int]) -> int:
 
     return aggregate_shares(first_shares, second_shares)
 
+def measure_batch_time_ms(
+    function,
+    counts: list[int],
+    batch_size: int,
+) -> float:
+    """Measure average execution time per call across a batch."""
+    if isinstance(batch_size, bool) or not isinstance(batch_size, int):
+        raise TypeError("batch_size must be an integer")
+    if batch_size < 1:
+        raise ValueError("batch_size must be at least 1")
+
+    start = time.perf_counter()
+
+    for _ in range(batch_size):
+        function(counts)
+
+    elapsed = time.perf_counter() - start
+    return (elapsed * 1000) / batch_size
 
 def summarize_timings(timings_ms: list[float]) -> dict:
     """Summarize timing measurements using the median and quartiles."""
@@ -53,24 +71,30 @@ def summarize_timings(timings_ms: list[float]) -> dict:
 
 
 def measure_timing_statistics(
-    function, counts: list[int], repetitions: int
+    function,
+    counts: list[int],
+    repetitions: int,
+    batch_size: int = 1000,
 ) -> dict:
-    """Return median, 25th percentile, and 75th percentile in milliseconds."""
+    """Return median and quartiles of average execution times in milliseconds."""
     if isinstance(repetitions, bool) or not isinstance(repetitions, int):
         raise TypeError("repetitions must be an integer")
     if repetitions < 2:
         raise ValueError("repetitions must be at least 2")
+    if isinstance(batch_size, bool) or not isinstance(batch_size, int):
+        raise TypeError("batch_size must be an integer")
+    if batch_size < 1:
+        raise ValueError("batch_size must be at least 1")
 
     timings_ms = []
 
     for _ in range(repetitions):
-        start = time.perf_counter()
-        function(counts)
-        elapsed = time.perf_counter() - start
-        timings_ms.append(elapsed * 1000)
+        elapsed_ms = measure_batch_time_ms(
+            function, counts, batch_size
+        )
+        timings_ms.append(elapsed_ms)
 
     return summarize_timings(timings_ms)
-
 
 def measure_median_time(
     function, counts: list[int], repetitions: int
